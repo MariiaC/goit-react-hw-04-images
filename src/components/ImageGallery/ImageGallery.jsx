@@ -3,41 +3,54 @@ import PropTypes from 'prop-types';
 import s from './ImageGallery.module.css';
 //import {ImageGalleryItem} from '../ImageGalleryItem/ImageGalleryItem'
 
-export const ImageGalleryItem = ({ smallImageURL, tags, largeImageURL, onImageClick }) => {
+export const ImageGalleryItem = ({ picture, onClick}) => {
     return (
         <li className={s.galItem}>
-  <img src={smallImageURL} alt={tags} className={s.galItem__image} onClick={() => onImageClick(largeImageURL)} />
+        <img
+          onClick={() => onClick(picture)}
+          src={picture.webformatURL}
+          alt={picture.tags} className={s.galItem__image}
+           />
 </li>
     )
  };
 
-export const ImageGallery = ({ images, onImageClick }) => {
+export const ImageGallery = ({ pictures, toggleModal  }) => {
     return (
         <ul className={s.galList}>
-            {images.map(({ id, largeImageURL, webformatURL, tags }) => (
-                <ImageGalleryItem key={id} smallImageURL={webformatURL} tags={tags} largeImageURL={largeImageURL} onImageClick={onImageClick} />
-            ))}
+        {pictures.map(picture => {
+          return (
+            <ImageGalleryItem key={picture.id}
+              picture={picture}
+              onClick={toggleModal} />
+          )
+                
+        })}
         </ul>
     )
 };
 
-//props
+//props ITEM
  ImageGalleryItem.propTypes = {
-  smallImageURL: PropTypes.string.isRequired,
-  tags: PropTypes.string.isRequired,
-  largeImageURL: PropTypes.string.isRequired,
-  onImageClick: PropTypes.func.isRequired,
-};
-
-
-ImageGallery.propTypes = {
-  images: PropTypes.arrayOf(
+   onClick: PropTypes.func.isRequired,
+    pictures: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      largeImageURL: PropTypes.string.isRequired,
+      // largeImageURL: PropTypes.string.isRequired,
       webformatURL: PropTypes.string.isRequired,
       tags: PropTypes.string.isRequired,
     })
   ),
-  onImageClick: PropTypes.func.isRequired,
+};
+
+
+ImageGallery.propTypes = {
+  pictures: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      // largeImageURL: PropTypes.string.isRequired,
+      // webformatURL: PropTypes.string.isRequired,
+      // tags: PropTypes.string.isRequired,
+    })
+  ),
+  toggleModal : PropTypes.func.isRequired,
 }

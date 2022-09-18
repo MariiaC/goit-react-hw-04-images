@@ -1,49 +1,46 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
+import {  useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import s from './Modal.module.css';
 
-export class Modal extends Component {
-  static propTypes = {
-    largeImageURL: PropTypes.string.isRequired,
-    onClose: PropTypes.func.isRequired,
-  };
+const modalRoot = document.querySelector('#modal-root');
+export const Modal= ({toggleModal, bigPicture}) =>{
 
-  //methods
-
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDowm);
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDowm);
-  }
-
-  handleKeyDowm = evt => {
-    if (evt.code === 'Escape') {
-      this.props.onClose();
-    }
-  };
-
-  onClickOverlay = evt => {
+  const onClickOverlay = evt => {
     if (evt.currentTarget === evt.target) {
-      this.props.onClose();
+      toggleModal()
     }
   };
 
-  loadTrigger = () => {
-    this.setState({ loading: false });
-  };
+  useEffect(() => {
+    const handleKeyDowm = evt => {
+      if (evt.code === 'Escape') {
+        toggleModal()
+      }
+    };
 
-  //render
+    window.addEventListener('keydown', handleKeyDowm);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDowm);
+    }
+  }, [toggleModal]);
 
-  render() {
-    const { largeImageURL } = this.props;
-    return (
-      <div className={s.overlay} onClick={this.onClickOverlay}>
+  const { largeImageURL, tags } = bigPicture;
+
+    return  createPortal(
+      <div className={s.overlay} onClick={onClickOverlay}>
         <div className={s.modal}>
-          <img src={largeImageURL} alt="" />
+          <img src={largeImageURL} alt={tags} />
         </div>
-      </div>
-    );
-  }
-}
+      </div>,
+    modalRoot
+    )
+    }
+
+Modal.propTypes = {
+    bigPicture: PropTypes.shape({
+    largeImageURL: PropTypes.string.isRequired,
+    tags: PropTypes.string.isRequired,
+  }),
+    toggleModal: PropTypes.func.isRequired,
+  };

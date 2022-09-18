@@ -1,84 +1,152 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ImageGallery } from './ImageGallery';
-//import { ImageGalleryItem } from './ImageGallery';
-//import { fetchImagesViaQuery } from './Services';
 import { Button } from './Button';
 import { Searchbar } from './Searchbar';
 import { Modal } from './Modal';
- import { Loader } from './Loader';
-
+import { Loader } from './Loader';
 import s from './App.module.css';
-import * as PixabayApi from './Services/PixabayApi'
+import * as PixabayApi from './Services/PixabayApi';
+//import { ImageGalleryItem } from './ImageGallery';
+//import { fetchImagesViaQuery } from './Services';
 
-export class App extends Component{
-  state = {
-    images: [],
-    searchQuery: '',
-    page: 1,
-    loading: false,
-    largeImageURL: '',
-    
+const Status = {
+  IDLE: 'idle',
+  PENDING: 'pending',
+  RESOLVED: 'resolved',
+  REJECTED: 'rejected',
+};
+
+export const App = () => {
+  const [status, setStatus] = useState(Status.IDLE);
+  const [showModal, setShowModal] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [bigPicture, setBigPicture] = useState(null);
+  const [picturesName, setPicturesName] = useState('');
+  const [error, setError] = useState(null);
+  const [showButton, setShowButton] = useState(true);
+  const [pictures, setPictures] = useState([]);
+  const [page, setPage] = useState(1);
+
+  const changePage = () => {
+    setPage(page + 1);
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    const prevQuery = prevState.searchQuery;
-    const nextQuery = this.state.searchQuery;
+  const clearPage = () => {
+    setPage(1);
+  };
 
-    if (prevQuery !== nextQuery) {
-      this.fetchImages();
+  const toggleModal = picture => {
+    setShowModal(!showModal);
+    setBigPicture(picture);
+  };
+
+  useEffect(() => {
+    if (!picturesName) {
+      return;
     }
-  };
+    if (page !== 1) {
+      return;
+    } else {
+      const fetchFirstPage = async searchQuery => {
+        setStatus(Status.PENDING);
+        setShowButton(true);
+        setPictures([]);
+        if (page === 1) {
+          try {
+            const fetchPicture = await PixabayApi.fetchImagesViaQuery(
+              searchQuery,
+              page
+            );
+            if (fetchPicture.data.total === 0) {
+              alert(
+                'Images not found. Please try again.'
+              );
+              setShowButton(false);
+              setStatus(Status.IDLE);
+              return;
+            }
+            if (fetchPicture.data.hits.length < 12) {
+              alert('End of list');
+              setPictures(prevPictures => [
+                ...prevPictures,
+                ...fetchPicture.data.hits,
+              ]);
+              setStatus(Status.RESOLVED);
+              setShowLoader(false);
+              setShowButton(false);
+              return;
+            }
+            setPictures(fetchPicture.data.hits);
+            setStatus(Status.RESOLVED);
+          } catch (error) {
+            setError(error);
+            setStatus(Status.REJECTED);
+          }
+        }
+      };
+      fetchFirstPage(picturesName);
+    }
+  }, [page, picturesName]);
 
+  useEffect(() => {
+    if (page > 1) {
+      const fetchNextPage = async searchQuery => {
+        setShowLoader(true);
+        setShowButton(false);
 
-  fetchImages = () => {
-    const { searchQuery, page } = this.state;
-    this.setState({ loading: true })
-    PixabayApi
-      .fetchImagesViaQuery(searchQuery, page)
-      .then(images => this.setState(prevState => ({
-        images: [...prevState.images, ...images],
-        page: prevState.page + 1,
-      })))
-      .then(this.scroll)
-      .catch(error => this.setState({ error }))
-      .finally(() => this.setState({ loading: false }))
-  };
+        try {
+          const fetchPicture = await PixabayApi.fetchImagesViaQuery(
+            searchQuery,
+            page
+          );
+          if (fetchPicture.data.hits.length < 12) {
+            alert(`End of list`);
+            setPictures(prevPictures => [
+              ...prevPictures,
+              ...fetchPicture.data.hits,
+            ]);
+            setStatus(Status.RESOLVED);
+            setShowLoader(false);
+            setShowButton(false);
+          } else {
+            setPictures(prevPictures => [
+              ...prevPictures,
+              ...fetchPicture.data.hits,
+            ]);
+            setStatus(Status.RESOLVED);
+            setShowLoader(false);
+            setShowButton(true);
+          }
+        } catch (error) {
+          setError(error);
+          setStatus(Status.REJECTED);
+        }
+      };
+      fetchNextPage(picturesName);
+    }
+  }, [page, picturesName]);
 
-  handleBarSubmit = query => {
-    this.setState({
-      searchQuery: query,
-      page: 1,
-      images: [],
-      showModal: false,
-    })
-  };
-
-  scroll = () => {
-    return window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: 'smooth',
-    });
-  };
-
-  toggleModal = () => {
-    this.setState(state => ({ showModal: !state.showModal }));
-  };
-
-  openModal = (largeImageURL) => {
-    this.setState({ showModal: true, largeImageURL: largeImageURL })
-  };
-
-  render() {
-    const { images, loading, showModal, largeImageURL } = this.state;
-    return (
+   return (
        <div className={s.app}>
-        <Searchbar onSubmit={this.handleBarSubmit} />
-        <ImageGallery images={images} onImageClick={this.openModal} />
-       {loading && <Loader />}
-      
-        {images.length !==0 && !loading && <Button onButtonClick={this.fetchImages}/>}
-        {showModal && <Modal onClose={this.toggleModal} largeImageURL={largeImageURL}/>}
-      </div>
+       <Searchbar onSubmit={setPicturesName} clearPage={clearPage} />
+       <>
+         {status === 'idle' && <h1>What are we searching for?</h1>}
+        {status === 'rejected' && (<h1> Something went wrong: {error.message}</h1>
+        )}
+         {status === 'resolved' && (
+           <div>
+             <ImageGallery pictures={pictures} toggleModal={toggleModal} />
+             {showButton && <Button changePage={changePage} />}
+             {showModal && (
+               <Modal toggleModal={toggleModal} bigPicture={bigPicture} />
+             )}
+           </div>
+         )}
+             {(status === 'pending' || showLoader) && <Loader />}
+       </>
+   </div>
     )
-  };
-}
+};
+
+
+
