@@ -1,0 +1,15 @@
+.loader__wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 100px;
+
+  color: blue;
+}
+
+.loader {
+  width: 30px;
+  height: 30px;
+  fill: currentColor;
+}
