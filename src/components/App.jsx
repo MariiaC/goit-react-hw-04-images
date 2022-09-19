@@ -41,90 +41,45 @@ export const App = () => {
   };
 
   useEffect(() => {
+
     if (!picturesName) {
       return;
     }
-    if (page !== 1) {
-      return;
-    } else {
-      const fetchFirstPage = async searchQuery => {
-        setStatus(Status.PENDING);
-        setShowButton(true);
-        setPictures([]);
-        if (page === 1) {
-          try {
-            const fetchPicture = await PixabayApi.fetchImagesViaQuery(
-              searchQuery,
-              page
-            );
-            if (fetchPicture.data.total === 0) {
-              alert(
-                'Images not found. Please try again.'
-              );
-              setShowButton(false);
-              setStatus(Status.IDLE);
-              return;
-            }
-            if (fetchPicture.data.hits.length < 12) {
-              alert('End of list');
-              setPictures(prevPictures => [
-                ...prevPictures,
-                ...fetchPicture.data.hits,
-              ]);
-              setStatus(Status.RESOLVED);
-              setShowLoader(false);
-              setShowButton(false);
-              return;
-            }
-            setPictures(fetchPicture.data.hits);
-            setStatus(Status.RESOLVED);
-          } catch (error) {
-            setError(error);
-            setStatus(Status.REJECTED);
-          }
-        }
-      };
-      fetchFirstPage(picturesName);
-    }
-  }, [page, picturesName]);
-
-  useEffect(() => {
-    if (page > 1) {
-      const fetchNextPage = async searchQuery => {
-        setShowLoader(true);
-        setShowButton(false);
-
-        try {
-          const fetchPicture = await PixabayApi.fetchImagesViaQuery(
-            searchQuery,
-            page
+    const search = async () => {
+      try {
+        const fetchPicture = await PixabayApi.fetchImagesViaQuery(
+          picturesName,
+          page
+        );
+        if (fetchPicture.data.total === 0) {
+          alert(
+            'Images not found. Please try again.'
           );
-          if (fetchPicture.data.hits.length < 12) {
-            alert(`End of list`);
-            setPictures(prevPictures => [
-              ...prevPictures,
-              ...fetchPicture.data.hits,
-            ]);
-            setStatus(Status.RESOLVED);
-            setShowLoader(false);
-            setShowButton(false);
-          } else {
-            setPictures(prevPictures => [
-              ...prevPictures,
-              ...fetchPicture.data.hits,
-            ]);
-            setStatus(Status.RESOLVED);
-            setShowLoader(false);
-            setShowButton(true);
-          }
-        } catch (error) {
-          setError(error);
-          setStatus(Status.REJECTED);
+          setShowButton(false);
+          setStatus(Status.IDLE);
+          return;
         }
-      };
-      fetchNextPage(picturesName);
+        setStatus(Status.RESOLVED);
+        setShowLoader(false);
+        
+        // сетимо картинки
+        setPictures(prevState => page > 1 ? [...prevState, ...fetchPicture.data.hits] : fetchPicture.data.hits);
+
+        if (fetchPicture.data.hits.length < 12) {
+          alert('End of list');
+    
+          setShowButton(false);
+        }
+      } catch (error) {
+        setError(error);
+        setStatus(Status.REJECTED);
+      }
     }
-  }, [page, picturesName]);
+      search();
+  }
+    
+  , [page, picturesName]);
+
 
    return (
        <div className={s.app}>
